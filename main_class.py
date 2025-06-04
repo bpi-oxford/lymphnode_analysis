@@ -28,7 +28,7 @@ class TissueAnalysis:
         config.segmentation_config.max_area = 1e10
         config.linking_config.max_distance = 25
         config.linking_config.max_neighbors = 15
-        config.segmentation_config.min_frontier = 0.00
+        config.segmentation_config.min_frontier = 0.05
         config.tracking_config.division_weight = -10
         config.tracking_config.appear_weight = -0.05
         config.tracking_config.disappear_weight = -0.05
@@ -87,7 +87,7 @@ class TissueAnalysis:
             edges = tiff.imread(edges_path)
         return foreground, edges
 
-    def cellpose_segmentation(self, raw_vid_path, custom_model_path, segmentation_directory, gamma_values=None , cellpose_config=None, nprocesses=2):
+    def cellpose_segmentation(self, raw_vid_path, custom_model_path, segmentation_directory, gamma_values=None , cellpose_config=None):
         '''
         this carries out the cellpose segmentation on the raw_video on frame at a time.
         If gamma_values is provided, it will apply the gamma transformation to the video before segmentation,
@@ -123,13 +123,13 @@ class TissueAnalysis:
                 vid = gamma_transform(vid, gamma)
                 video_name = os.path.basename(raw_vid_path).split('.')[0]
                 print(f"Processing video: {video_name}, shape: {vid.shape}")
-                seg = process_video_with_multiprocessing(vid, custom_model_path ,cellpose_config, nprocesses=nprocesses)
+                seg = process_video_with_multiprocessing(vid, custom_model_path ,cellpose_config, nprocesses=4)
                 tiff.imwrite(segmentation_directory + video_name[0:-4] +  'masks_gamma' + str(gamma) +'.tif', seg )
         else:
             print("No gamma values provided. Proceeding with raw video.")
             vid = tiff.imread(raw_vid_path)
             print(f"Processing video: {video_name}, shape: {vid.shape}")
-            seg = process_video_with_multiprocessing(vid, custom_model_path ,cellpose_config, nprocesses=nprocesses)
+            seg = process_video_with_multiprocessing(vid, custom_model_path ,cellpose_config, nprocesses=4)
             tiff.imwrite(segmentation_directory + video_name[0:-4] +  'masks.tif'    , seg )
             
     def perform_ultrack_segmentation(self, foreground, edges):
@@ -203,7 +203,7 @@ if __name__ == "__main__":
     analysis = TissueAnalysis(output_dir=output_dir, raw_shape=raw_shape)
     analysis.output_dir=output_dir
     gamma = [0.75]
-    analysis.cellpose_segmentation(raw_image_path , custom_model_path, segmentation_directory=segmentation_directory, gamma_values=gamma, nprocesses=2)
+    analysis.cellpose_segmentation(raw_image_path , custom_model_path, segmentation_directory=segmentation_directory, gamma_values=gamma)
     
     foreground, edges = analysis.process_labels_to_contours(find_contours=True, segmentation_directory_path=segmentation_directory,
                                                             foreground_path=foreground_path,
