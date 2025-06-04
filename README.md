@@ -20,6 +20,8 @@ BPI_tissue
 
          /ultrack_scripts - mostly scripts for visualisation of ultrack outputs. Mostly not used in the main workflow other than the flow_computation.py script which calcualte the flow field to aid with ultrack tracking.
 
+         /Utils - a few scripts for handling the large data. czi_loader.py is the most useful for loading in the czi files as it can use out of memory methods. Cell_identifier is prelimiary code to determine cell type through a secondary imaging channel. Perhaps would be best located elsewhere.
+
 
     
         

@@ -45,7 +45,7 @@ class TissueAnalysis:
         Inputs:
         - find_contours: bool, if True, it will find contours from all the tif files in the segmentation directory. This is 
         useful for when combining multiple gamma filters for example (as ultrack claims to be improved by this - see paper)
-        - segmentation_directory_path: str, path to the directory containing segmentation files.
+        - segmentation_directory_path: str, path to the directory containing segmentation files. - must be integer form!
         - foreground_path: str, path to the foreground file. (If previously calculated)
         - edges_path: str, path to the edges file. (If previously calculated)
 
@@ -67,10 +67,12 @@ class TissueAnalysis:
             if file.shape[0] != self.raw_shape[0] or file.shape[1:] != self.raw_shape[1:]:
                 print('wrong shape! Reshaping the file to match raw_shape (ignoring channels).')
                 loaded_files[i] = np.resize(file, (self.raw_shape[0], *self.raw_shape[1:]))
-                loaded_files[i]=loaded_files[i].astype(np.uint8)
-                print('raw image shape=' +  str(file.shape) + 'segmentation shape = ' + str(loaded_files[i].shape))
-        
-               
+            loaded_files[i]=loaded_files[i].astype(np.uint16)
+            print(f"Data type of reshaped file: {loaded_files[i].dtype}, Array type: {type(loaded_files[i])}")
+            assert np.issubdtype(loaded_files[i].dtype, np.integer), f"Data type is not integer: {loaded_files[i].dtype}"
+            
+
+
         foreground, edges = labels_to_contours(loaded_files)
         print(edges)
         # Save foreground and edges
@@ -178,6 +180,7 @@ class TissueAnalysis:
         print(f"Segments shape: {segments.shape}, dtype: {segments.dtype}")
         segments = zarr.open(output_file_path, mode='r')
         concatenated_segments = np.concatenate(segments, axis=0)  # Concatenate all frames along the first axis
+
         tiff.imwrite(output_file_path.replace('.zarr', '_concatenated.tif'), concatenated_segments)
         print(f"Zarr file concatenated and converted to 32-bit integer TIFF. Shape: {concatenated_segments.shape}")
         return segments
