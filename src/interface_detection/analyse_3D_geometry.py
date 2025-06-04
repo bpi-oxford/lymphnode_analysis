@@ -1,7 +1,7 @@
 '''
 code to take the 3D segmentation and find the interfaces
 
-initially start off by just extracting the 3D segmentation of one cell
+initially start off by just extracting the 3D segmentation of one cell - just some ideas no solid code yet
 
 Then find the interface between two cells
 '''
