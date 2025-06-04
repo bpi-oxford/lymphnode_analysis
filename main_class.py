@@ -36,7 +36,7 @@ class TissueAnalysis:
         config.segmentation_config.max_noise = 0.05
         return config
 
-    def process_labels_to_contours(self, find_contours=False, segmentation_directory_path=None, foreground_path=None, edges_path=None):
+    def process_labels_to_contours(self, segmentation_directory_path=None):
         '''
         Description:
         This function processes the labels to extract foreground and edges. Labels must be found in a specific directory.
@@ -53,41 +53,36 @@ class TissueAnalysis:
         - foreground: np.ndarray, the foreground mask.
         - edges: np.ndarray, the edges (values from 0 to 1).
         '''
-        if find_contours:
-            if not segmentation_directory_path:
-                raise ValueError("Path to segmentation directory must be provided when find_contours is True.")
-            # Load files and find contours
-            file_paths = glob.glob(os.path.join(segmentation_directory_path, '*.tif'))
-            print(file_paths)
-            loaded_files = [tiff.imread(file_path) for file_path in file_paths]
-            
-            for i, file in enumerate(loaded_files):
-                print(file.shape)
-                if file.shape[0] != self.raw_shape[0] or file.shape[2:] != self.raw_shape[2:]:
-                    print('wrong shape! Reshaping the file to match raw_shape (ignoring channels).')
-                    loaded_files[i] = np.resize(file, (self.raw_shape[0], *self.raw_shape[2:]))
-                    loaded_files[i]=loaded_files[i].astype(np.uint8)
-                    print(loaded_files[i].shape)
-                    
-            print(type(loaded_files[0][0,0,0,0]))
-            foreground, edges = labels_to_contours(loaded_files)
-            print(edges)
-            # Save foreground and edges
-            foreground_path = os.path.join(segmentation_directory_path, 'foreground.tif')
-            edges_path = os.path.join(segmentation_directory_path, 'edges.tif')
-            tiff.imwrite(foreground_path, foreground.astype(np.uint16))
-            tiff.imwrite(edges_path, edges)
-            print(f"Foreground saved to {foreground_path}")
-            print(f"Edges saved to {edges_path}")
-        else:
-            if not foreground_path or not edges_path:
-                raise ValueError("foreground_path and edges_path must be provided when find_contours is False.")
-            # Load foreground and edges from provided paths
-            foreground = tiff.imread(foreground_path)
-            edges = tiff.imread(edges_path)
+        if not segmentation_directory_path:
+            raise ValueError("Path to segmentation directory must be provided when finding contours.")
+        # Load files and find contours
+        file_paths = glob.glob(os.path.join(segmentation_directory_path, '*.tif'))
+        print(file_paths)
+        loaded_files = [tiff.imread(file_path) for file_path in file_paths]
+        
+        #For some reason I dont understand, large files seems to lose their shape when loaded/saved with tifffile.
+        # This is a workaround to ensure the files have the correct shape.
+        for i, file in enumerate(loaded_files):
+            print(file.shape)
+            if file.shape[0] != self.raw_shape[0] or file.shape[1:] != self.raw_shape[1:]:
+                print('wrong shape! Reshaping the file to match raw_shape (ignoring channels).')
+                loaded_files[i] = np.resize(file, (self.raw_shape[0], *self.raw_shape[1:]))
+                loaded_files[i]=loaded_files[i].astype(np.uint8)
+                print('raw image shape=' +  str(file.shape) + 'segmentation shape = ' + str(loaded_files[i].shape))
+        
+               
+        foreground, edges = labels_to_contours(loaded_files)
+        print(edges)
+        # Save foreground and edges
+        foreground_path = os.path.join(segmentation_directory_path, 'foreground.tif')
+        edges_path = os.path.join(segmentation_directory_path, 'edges.tif')
+        tiff.imwrite(foreground_path, foreground.astype(np.uint16))
+        tiff.imwrite(edges_path, edges)
+        print(f"Foreground saved to {foreground_path}")
+        print(f"Edges saved to {edges_path}")
         return foreground, edges
 
-    def cellpose_segmentation(self, raw_vid_path, custom_model_path, segmentation_directory, gamma_values=None , cellpose_config=None):
+    def cellpose_segmentation(self, raw_vid_path, custom_model_path, segmentation_directory, gamma_values=None , cellpose_config=None, nprocesses=4):
         '''
         this carries out the cellpose segmentation on the raw_video on frame at a time.
         If gamma_values is provided, it will apply the gamma transformation to the video before segmentation,
@@ -99,7 +94,8 @@ class TissueAnalysis:
         custom_model_path: str, path to the custom cellpose model to use for segmentation.
         segmentation_directory: str, path to the directory where segmentation masks will be saved.
         gamma_values: list, optional, list of gamma values to apply to the video before segmentation. Default is None.
-        cellpose_config: dict, optional, dictionary containing cellpose configuration parameters. Default is None. The default parameters are:
+        cellpose_config: dict, optional, dictionary containing cellpose configuration parameters. Default is None. If None provded the
+        the default parameters are:
         {
             'flow3D_smooth': 2,
             'batch_size': 8,
@@ -123,13 +119,13 @@ class TissueAnalysis:
                 vid = gamma_transform(vid, gamma)
                 video_name = os.path.basename(raw_vid_path).split('.')[0]
                 print(f"Processing video: {video_name}, shape: {vid.shape}")
-                seg = process_video_with_multiprocessing(vid, custom_model_path ,cellpose_config, nprocesses=4)
+                seg = process_video_with_multiprocessing(vid, custom_model_path ,cellpose_config, nprocesses=nprocesses)
                 tiff.imwrite(segmentation_directory + video_name[0:-4] +  'masks_gamma' + str(gamma) +'.tif', seg )
         else:
             print("No gamma values provided. Proceeding with raw video.")
             vid = tiff.imread(raw_vid_path)
             print(f"Processing video: {video_name}, shape: {vid.shape}")
-            seg = process_video_with_multiprocessing(vid, custom_model_path ,cellpose_config, nprocesses=4)
+            seg = process_video_with_multiprocessing(vid, custom_model_path ,cellpose_config, nprocesses=nprocesses)
             tiff.imwrite(segmentation_directory + video_name[0:-4] +  'masks.tif'    , seg )
             
     def perform_ultrack_segmentation(self, foreground, edges):
@@ -188,14 +184,34 @@ class TissueAnalysis:
 
 
 if __name__ == "__main__":
-    label_path = "/home/edwheeler/Documents/cropped_region_2_motile/segmentation_masks.tif"
-    output_dir = "/home/edwheeler/Documents/tissue_analysis_project/tracking_benchmarking/outputs/node1_crop2/"
-    segmentation_directory = r'/home/edwheeler/Documents/raw_data/cropped_region_2_motile/gamma_trans'
-    foreground_path = r'/home/edwheeler/Documents/node2_crop1/gamma_trans/foreground.tif'
-    edges_path = r'/home/edwheeler/Documents/node2_crop1/gamma_trans/edges.tif'
-    raw_image_path = r'/home/edwheeler/Documents/raw_data/cropped_region_2_motile/b2-2a_2c_pos6-01_deskew_cgt_cropped_for_segmentation_motile_region.tif'
-    custom_model_path = r"/home/edwheeler/Documents/training_data/train/models/CP_20250430_181517"
 
+    '''
+    Short scripts to run the TissueAnalysis class for a specific dataset.
+    This is a test script for the TissueAnalysis class, which performs segmentation and tracking on a tissue dataset.
+
+    Inputs:
+    --------------------------------------------------
+    - raw_image_path: str, path to the raw image file.
+    - label_path: str, path to the label file (mask video - not used in this script as replaced by segmentation directory).
+    - output_dir: str, path to the output directory where results will be saved.
+    - segmentation_directory: str, path to the directory where segmentation masks will be saved. THis is also where the labels are loaded from when finding contours in process_labels_to_contours.
+    - foreground_path: str, path to the foreground file (if previously calculated).
+    - edges_path: str, path to the edges file (if previously calculated).
+    - custom_model_path: str, path to the custom cellpose model to use for segmentation.
+    - gamma_values: list, optional, list of gamma values to apply to the video before segmentation. Default is [0.75].
+
+    Outputs:
+    --------------------------------------------------
+    See the class for the outputs of each method.
+
+    '''
+    output_dir = "/home/edwheeler/Documents/raw_data/cropped_region_1/develop_output/results/"
+    segmentation_directory = r'/home/edwheeler/Documents/raw_data/cropped_region_1/develop_output/segmentation/'
+    #foreground_path = r'/home/edwheeler/Documents/node2_crop1/gamma_trans/foreground.tif'
+    #edges_path = r'/home/edwheeler/Documents/node2_crop1/gamma_trans/edges.tif'
+    raw_image_path = r'/home/edwheeler/Documents/raw_data/cropped_region_1/raw_video/b2-2a_2c_pos6-01_deskew_cgt-cropped_for_segmentation.tif'
+    custom_model_path = r"/home/edwheeler/Documents/training_data/train/models/CP_20250430_181517"
+    flow_path = r'/home/edwheeler/Documents/tissue_analysis_project/tracking_benchmarking/outputs/flow_field_node2_crop1.zarr'
     raw_image = tiff.imread(raw_image_path)
     raw_shape = raw_image.shape
     print(raw_shape)
@@ -203,14 +219,21 @@ if __name__ == "__main__":
     analysis = TissueAnalysis(output_dir=output_dir, raw_shape=raw_shape)
     analysis.output_dir=output_dir
     gamma = [0.75]
-    analysis.cellpose_segmentation(raw_image_path , custom_model_path, segmentation_directory=segmentation_directory, gamma_values=gamma)
+
+    cellpose_config = {
+        'flow3D_smooth': 2,
+        'batch_size': 8,
+        'do_3D': True,
+        'diameter': 30,
+        'min_size': 500,
+        'z_axis': 0
+    }
+
+    #analysis.cellpose_segmentation(raw_image_path , custom_model_path, segmentation_directory=segmentation_directory, cellpose_config=cellpose_config, gamma_values=gamma, nprocesses=4)
     
-    foreground, edges = analysis.process_labels_to_contours(find_contours=True, segmentation_directory_path=segmentation_directory,
-                                                            foreground_path=foreground_path,
-                                                            edges_path=edges_path)
+    foreground, edges = analysis.process_labels_to_contours(segmentation_directory_path=segmentation_directory)
     analysis.perform_ultrack_segmentation(foreground, edges)
     
-    flow_path = r'/home/edwheeler/Documents/tissue_analysis_project/tracking_benchmarking/outputs/flow_field_node2_crop1.zarr'
     analysis.add_flow_field(raw_vid_path=raw_image_path , calculate_flow=False, flow_path = flow_path)
     
     analysis.track_and_solve()
