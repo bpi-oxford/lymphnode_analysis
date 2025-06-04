@@ -124,9 +124,6 @@ def plot_superplot_velocity(track_df_list , df_labels , output_path):
     plt.show()
     plt.savefig(output_path + f"superplot_velocity.png", dpi=300, bbox_inches='tight')
 
-
-
-
     return
 
 
