@@ -201,3 +201,8 @@ cython_debug/
 *.zarr
 *.csv
 *.npy
+*.toml
+*.pyc
+
+# macOS system files
+.DS_Store
