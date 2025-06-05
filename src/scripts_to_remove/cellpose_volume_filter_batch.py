@@ -1,9 +1,15 @@
 import tifffile as tiff
 import numpy as np
 import os
-from cellpose_volume_analyser import calculate_volumes , filter_volumes
+from scripts_to_remove.cellpose_volume_analyser import calculate_volumes , filter_volumes
 from natsort import natsorted
 from multiprocessing import Pool, cpu_count
+
+'''
+This scripts filters segmentation masks based on a volume limit. Designed to be used on 
+a direcotry that contains segmentation masks in .tif format - in individual frame z-stacks.
+Now I believe this is redundant as modifying the min_size parameter in the cellpose model should do this.
+'''
 
 def filter_batch(directory, vol_limit_list):
     image_paths = natsorted([os.path.join(directory, f) for f in os.listdir(directory) if f.endswith("seg_masks.tif")])

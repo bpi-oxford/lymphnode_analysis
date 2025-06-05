@@ -5,7 +5,7 @@
 import tifffile as tiff
 import numpy as np
 import os
-from cellpose_scripts.cellpose_volume_analyser import calculate_volumes , filter_volumes
+from scripts_to_remove.cellpose_volume_analyser import calculate_volumes , filter_volumes
 from ultrack import MainConfig, Tracker
 import ultrack
 from ultrack_scripts.helper_function_relabel_segmentation_masks_MPI import relabel_segmentation_masks_MPI

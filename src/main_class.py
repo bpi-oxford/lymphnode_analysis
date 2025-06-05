@@ -176,13 +176,14 @@ class TissueAnalysis:
         The data is held in temporary files by ultrack behind the scenes, so we don't need to pass it
         '''
         output_file_path = os.path.join(self.output_dir, 'relabelled_segments.zarr')
-        segments = tracks_to_zarr(self.config, self.track_df, store_or_path=output_file_path, overwrite=True)
-        print(f"Segments shape: {segments.shape}, dtype: {segments.dtype}")
+        segments_to_zarr = tracks_to_zarr(self.config, self.track_df, store_or_path=output_file_path, overwrite=True) #this relabels the segments and saves them to a zarr file
+        print(f"Segments shape: {segments_to_zarr.shape}, dtype: {segments_to_zarr.dtype}")
         segments = zarr.open(output_file_path, mode='r')
         concatenated_segments = np.concatenate(segments, axis=0)  # Concatenate all frames along the first axis
-
-        tiff.imwrite(output_file_path.replace('.zarr', '_concatenated.tif'), concatenated_segments)
-        print(f"Zarr file concatenated and converted to 32-bit integer TIFF. Shape: {concatenated_segments.shape}")
+        reshaped_segments = np.reshape(concatenated_segments, segments_to_zarr.shape)
+        print(f"Reshaped segments to match segments_to_zarr. New shape: {reshaped_segments.shape}")
+        tiff.imwrite(output_file_path.replace('.zarr', '_concatenated.tif'), reshaped_segments)
+        print(f"Zarr file concatenated and converted to 32-bit integer TIFF. Shape: {reshaped_segments.shape}")
         return segments
 
 
@@ -232,7 +233,7 @@ if __name__ == "__main__":
         'z_axis': 0
     }
 
-    #analysis.cellpose_segmentation(raw_image_path , custom_model_path, segmentation_directory=segmentation_directory, cellpose_config=cellpose_config, gamma_values=gamma, nprocesses=4)
+    analysis.cellpose_segmentation(raw_image_path , custom_model_path, segmentation_directory=segmentation_directory, cellpose_config=cellpose_config, gamma_values=gamma, nprocesses=4)
     
     foreground, edges = analysis.process_labels_to_contours(segmentation_directory_path=segmentation_directory)
     analysis.perform_ultrack_segmentation(foreground, edges)

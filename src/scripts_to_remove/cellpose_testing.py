@@ -4,6 +4,7 @@ import numpy as np
 from skimage.io import imsave
 
 if __name__ == "__main__":
+    
     # Define paths
     input_image_path = r'/home/edwheeler/Documents/cropped_region_1/raw_frames/b2-2a_2c_pos6-01_deskew_cgt-cropped_for_segmentationt0.tif'  # Replace with the path to your input image
     output_masks_dir = r'/mnt/Work/Group Fritzsche/Ed/'  # Replace with the path to your output directory
