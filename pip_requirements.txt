@@ -1,6 +1,6 @@
 # Fixed dependency conflicts
-
-
+#GPU acceleration - Added CuPy for CUDA 12.x
+cupy-cuda12x>=12.0.0
 # GPU-accelerated image processing
 cucim>=23.10.0
 
