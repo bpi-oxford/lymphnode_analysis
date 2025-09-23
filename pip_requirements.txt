@@ -1,5 +1,11 @@
 # Pinned versions to avoid dependency resolution conflicts
 
+# GPU acceleration - add CuPy with specific CUDA version
+cupy-cuda11x>=11.0.0  # Use cuda11x for better Colab compatibility
+# OR try:
+# cupy-cuda12x>=12.0.0  # If you know you have CUDA 12
+# GPU-accelerated image processing
+cucim>=23.10.0
 
 # Core packages (use existing Colab versions)
 numpy>=2.0.0
@@ -29,6 +35,9 @@ numcodecs==0.13.1
 h5py==3.14.0
 dask==2025.5.0
 xarray==2025.9.0
+
+# Resolve fsspec conflict - use newer version
+fsspec>=2025.3.0
 
 # Visualization - use lighter napari alternative or skip
 # napari==0.4.18  # Comment out to avoid conflicts
