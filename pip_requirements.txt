@@ -35,6 +35,7 @@ plotly>=5.15.0
 
 # Image analysis
 aicsimageio==4.14.0
+aicspylibczi>=3.1.1
 ome-zarr==0.11.1
 
 # Utilities
