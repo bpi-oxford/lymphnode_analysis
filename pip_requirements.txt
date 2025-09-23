@@ -20,9 +20,9 @@ cellpose>=2.2.0
 ultrack>=0.6.0
 trackpy>=0.6.0
 
-# Data handling and storage - Compatible versions
-zarr>=2.15.0,<2.19.0
-numcodecs>=0.12.0
+# Data handling and storage - Fixed compatible versions
+zarr==2.18.3
+numcodecs==0.13.1
 h5py>=3.9.0
 dask>=2023.8.0
 xarray>=2023.8.0
