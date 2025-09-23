@@ -1,9 +1,10 @@
-# Pinned versions to avoid dependency resolution conflicts
+# Fixed dependency conflicts
 
 # GPU acceleration - add CuPy with specific CUDA version
 cupy-cuda11x>=11.0.0  # Use cuda11x for better Colab compatibility
 # OR try:
 # cupy-cuda12x>=12.0.0  # If you know you have CUDA 12
+
 # GPU-accelerated image processing
 cucim>=23.10.0
 
@@ -29,24 +30,23 @@ cellpose==3.1.1
 ultrack==0.6.3
 trackpy==0.6.4
 
-# Data storage - pinned versions
+# Data storage - fixed version constraints to resolve conflicts
 zarr==2.15.0
 numcodecs==0.13.1
 h5py==3.14.0
-dask==2025.5.0
-xarray==2025.9.0
+dask>=2023.8.0,<2025.0.0  # Use older dask to avoid fsspec conflicts
+xarray>=2023.8.0,<2025.0.0
 
-# Resolve fsspec conflict - use newer version
-fsspec>=2025.3.0
+# Fixed fsspec version to satisfy aicsimageio requirement
+fsspec>=2022.8.0,<2023.9.0  # Compatible with aicsimageio
 
-# Visualization - use lighter napari alternative or skip
-# napari==0.4.18  # Comment out to avoid conflicts
+# Visualization
 plotly>=5.15.0
 
-# Image analysis
-aicsimageio==4.14.0
+# Image analysis - use compatible versions
+aicsimageio>=4.11.0,<4.15.0  # Keep within compatible range
 aicspylibczi>=3.1.1
-ome-zarr==0.11.1
+ome-zarr>=0.8.0,<0.12.0
 
 # Utilities
 tqdm>=4.65.0
