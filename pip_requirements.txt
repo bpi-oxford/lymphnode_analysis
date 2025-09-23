@@ -1,9 +1,5 @@
 # Fixed dependency conflicts
 
-# OR stick with CUDA 11.x which is most compatible with Colab:
-cupy-cuda12x>=12.0.0
-# OR try:
-# cupy-cuda12x>=12.0.0  # If you know you have CUDA 12
 
 # GPU-accelerated image processing
 cucim>=23.10.0
