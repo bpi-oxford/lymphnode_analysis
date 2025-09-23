@@ -23,7 +23,7 @@ ultrack==0.6.3
 trackpy==0.6.4
 
 # Data storage - pinned versions
-zarr==2.18.3
+zarr==2.15.0
 numcodecs==0.13.1
 h5py==3.14.0
 dask==2025.5.0
