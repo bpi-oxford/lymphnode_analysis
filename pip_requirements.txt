@@ -1,4 +1,7 @@
 # Pinned versions to avoid dependency resolution conflicts
+# Add cuCIM for GPU-accelerated image processing
+cucim>=23.10.0
+cupy-cuda12x>=12.0.0
 
 # Core packages (use existing Colab versions)
 numpy>=2.0.0
