@@ -1,7 +1,7 @@
 # Fixed dependency conflicts
 
-# GPU acceleration - add CuPy with specific CUDA version
-cupy-cuda11x>=11.0.0  # Use cuda11x for better Colab compatibility
+# OR stick with CUDA 11.x which is most compatible with Colab:
+cupy-cuda11x>=11.0.0
 # OR try:
 # cupy-cuda12x>=12.0.0  # If you know you have CUDA 12
 
