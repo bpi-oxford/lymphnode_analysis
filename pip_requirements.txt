@@ -1,44 +1,48 @@
 # Core scientific computing
-numpy==2.0.2
-pandas==2.2.3
-matplotlib==3.10.1
-scipy==1.14.0
-scikit-image==0.22.0
+numpy>=2.0.0
+pandas>=2.2.0
+matplotlib>=3.7.0
+scipy>=1.11.0
+scikit-image>=0.22.0
 
 # Image processing and file formats
-tifffile==2023.7.10
-imageio==2.31.1
-opencv-python-headless==4.8.0.76
-pillow==10.0.0
+tifffile>=2023.7.0
+imageio>=2.31.0
+opencv-python-headless>=4.8.0
+pillow>=10.0.0
 
-# Deep learning and computer vision
-torch==2.0.1
-torchvision==0.15.2
-cellpose==2.2.2
+# Deep learning and computer vision (Python 3.12 compatible)
+torch>=2.2.0
+torchvision>=0.17.0
+cellpose>=2.2.0
 
 # Tracking and analysis
-ultrack==0.6.3
-trackpy==0.6.1
+ultrack>=0.6.0
+trackpy>=0.6.0
 
-# Data handling and storage - FIXED VERSIONS
-zarr==2.16.1
-numcodecs==0.11.0
-h5py==3.9.0
-dask==2023.8.1
-xarray==2023.8.0
+# Data handling and storage - Compatible versions
+zarr>=2.15.0,<2.19.0
+numcodecs>=0.12.0
+h5py>=3.9.0
+dask>=2023.8.0
+xarray>=2023.8.0
 
 # Visualization and GUI
-napari==0.4.18
-plotly==5.15.0
-matplotlib==3.7.2
+napari>=0.4.18
+plotly>=5.15.0
 
 # Image analysis specific
-aicsimageio==4.11.0
-ome-zarr==0.8.3
+aicsimageio>=4.11.0
+ome-zarr>=0.8.0
 
 # Utilities
-tqdm==4.65.0
-pyyaml==6.0.1
-click==8.1.6
-loguru==0.7.0
-requests==2.31.0
+tqdm>=4.65.0
+pyyaml>=6.0.0
+click>=8.1.0
+requests>=2.31.0
+
+# Additional dependencies that might be needed
+psutil
+packaging
+setuptools
+wheel
