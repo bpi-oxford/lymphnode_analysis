@@ -1,47 +1,47 @@
-# Core scientific computing
+# Pinned versions to avoid dependency resolution conflicts
+
+# Core packages (use existing Colab versions)
 numpy>=2.0.0
 pandas>=2.2.0
 matplotlib>=3.7.0
 scipy>=1.11.0
 scikit-image>=0.22.0
 
-# Image processing and file formats
-tifffile>=2023.7.0
+# Image processing
+tifffile==2025.9.20
 imageio>=2.31.0
 opencv-python-headless>=4.8.0
 pillow>=10.0.0
 
-# Deep learning and computer vision (Python 3.12 compatible)
+# Deep learning (use existing versions)
 torch>=2.2.0
 torchvision>=0.17.0
-cellpose>=2.2.0
+cellpose==3.1.1
 
-# Tracking and analysis
-ultrack>=0.6.0
-trackpy>=0.6.0
+# Your main packages with specific versions
+ultrack==0.6.3
+trackpy==0.6.4
 
-# Data handling and storage - Fixed compatible versions
+# Data storage - pinned versions
 zarr==2.18.3
 numcodecs==0.13.1
-h5py>=3.9.0
-dask>=2023.8.0
-xarray>=2023.8.0
+h5py==3.14.0
+dask==2025.5.0
+xarray==2025.9.0
 
-# Visualization and GUI
-napari>=0.4.18
+# Visualization - use lighter napari alternative or skip
+# napari==0.4.18  # Comment out to avoid conflicts
 plotly>=5.15.0
 
-# Image analysis specific
-aicsimageio>=4.11.0
-ome-zarr>=0.8.0
+# Image analysis
+aicsimageio==4.14.0
+ome-zarr==0.11.1
 
 # Utilities
 tqdm>=4.65.0
 pyyaml>=6.0.0
 click>=8.1.0
 requests>=2.31.0
-
-# Additional dependencies that might be needed
 psutil
 packaging
 setuptools
