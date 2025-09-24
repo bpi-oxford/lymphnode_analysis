@@ -2,7 +2,7 @@
 #GPU acceleration - Added CuPy for CUDA 12.x
 cupy-cuda12x>=12.0.0
 # GPU-accelerated image processing
-cucim>=23.10.0
+cucim-cu12==25.8.0
 
 # Core packages (use existing Colab versions)
 numpy>=2.0.0
