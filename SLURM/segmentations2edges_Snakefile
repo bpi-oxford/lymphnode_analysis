@@ -1,0 +1,174 @@
+# Snakemake workflow for labels_to_contours processing
+# Run with: ./segmentations2edges.sh
+# Or with dry-run: ./segmentations2edges.sh --dry-run
+
+import glob
+import os
+
+# Load configuration
+configfile: "segmentations2edges_config.yaml"
+
+INPUT_DIR = config["input_dir"]
+OUTPUT_DIR = config["output_dir"]
+RAW_IMAGE_PATH = config["raw_image_path"]
+SIGMA = config["sigma"]
+
+# Get list of input files and extract their base names
+input_files = sorted(glob.glob(os.path.join(INPUT_DIR, "*.tif*")))
+# Extract base names without extension
+INPUT_NAMES = [os.path.splitext(os.path.basename(f))[0] for f in input_files]
+
+# Final outputs
+rule all:
+    input:
+        OUTPUT_DIR + "/videos/combined_timelapse_edges.tif",
+        OUTPUT_DIR + "/videos/combined_timelapse_foreground.tif"
+        # Individual files (uncomment if needed)
+        #expand(OUTPUT_DIR + "/{input_name}_foreground.tif", input_name=INPUT_NAMES),
+        #expand(OUTPUT_DIR + "/{input_name}_edges.tif"     , input_name=INPUT_NAMES)
+
+# Rule 1: Run labels_to_contours on individual files
+rule labels_to_contours:
+    input:
+        INPUT_DIR + "/{input_name}.tif"
+    output:
+        foreground = OUTPUT_DIR + "/{input_name}_foreground.tif",
+        edges = OUTPUT_DIR + "/{input_name}_edges.tif"
+    params:
+        sigma = SIGMA,
+        raw_image = RAW_IMAGE_PATH,
+        file_index = lambda wildcards: INPUT_NAMES.index(wildcards.input_name)
+    threads: 1
+    resources:
+        mem_mb = 256000,
+        runtime = 30,
+        slurm_partition = "short",
+        slurm_extra = "--exclude=compg009,compg010,compg011,compg013"
+    log:
+        "slogs/labels_to_contours_{input_name}.log"
+    shell:
+        """
+        module purge
+        source /well/kir/config/modules.sh
+        module load Python/3.10.8-GCCcore-12.2.0
+        source ~/devel/venv/Python-3.10.8-GCCcore-12.2.0/ultrack_env/bin/activate
+        
+        python3 -u /users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/src/utils/batch_labels_to_contours.py \
+            --input_dir {INPUT_DIR} \
+            --output_dir {OUTPUT_DIR} \
+            --sigma {params.sigma} \
+            --raw_image_path {params.raw_image} \
+            --file_index {params.file_index} &> {log}
+        """
+
+
+# Rule 2: Combine all edges files into a single timelapse video
+rule combine_edges_timelapse:
+    input:
+        expand(OUTPUT_DIR + "/{input_name}_edges.tif", input_name=INPUT_NAMES)
+    output:
+        OUTPUT_DIR + "/videos/combined_timelapse_edges.tif"
+    threads: 1
+    resources:
+        mem_mb = 256000,
+        runtime = 30,
+        slurm_partition = "short",
+        slurm_extra = "--exclude=compg009,compg010,compg011,compg013"
+    log:
+        "slogs/combine_edges_timelapse.log"
+    shell:
+        """
+        module purge
+        source /well/kir/config/modules.sh
+        module load Python/3.10.8-GCCcore-12.2.0
+        source ~/devel/venv/Python-3.10.8-GCCcore-12.2.0/ultrack_env/bin/activate
+        
+        python3 -u /users/kir-fritzsche/aif490/devel/tissue_analysis/segmentation_scripts/stack_combiner.py \
+            --input_dir {OUTPUT_DIR} \
+            --output_path {OUTPUT_DIR}/videos \
+            --phrase edges \
+            --dtype float32 \
+            --verbose &> {log}
+        """
+
+
+# Rule 3: Combine all foreground files into a single timelapse video
+rule combine_foreground_timelapse:
+    input:
+        expand(OUTPUT_DIR + "/{input_name}_foreground.tif", input_name=INPUT_NAMES)
+    output:
+        OUTPUT_DIR + "/videos/combined_timelapse_foreground.tif"
+    threads: 1
+    resources:
+        mem_mb = 256000,
+        runtime = 30,
+        slurm_partition = "short",
+        slurm_extra = "--exclude=compg009,compg010,compg011,compg013"
+    log:
+        "slogs/combine_foreground_timelapse.log"
+    shell:
+        """
+        module purge
+        source /well/kir/config/modules.sh
+        module load Python/3.10.8-GCCcore-12.2.0
+        source ~/devel/venv/Python-3.10.8-GCCcore-12.2.0/ultrack_env/bin/activate
+        
+        python3 -u /users/kir-fritzsche/aif490/devel/tissue_analysis/segmentation_scripts/stack_combiner.py \
+            --input_dir {OUTPUT_DIR} \
+            --output_path {OUTPUT_DIR}/videos \
+            --phrase foreground \
+            --verbose &> {log}
+        """
+
+
+# Rule 3: Combine edges files
+rule combine_edges:
+    input:
+        expand(OUTPUT_DIR + "/{input_name}_edges.tif", input_name=INPUT_NAMES)
+    output:
+        OUTPUT_DIR + "/combined_edges_blurred.tif"
+    threads: 1
+    resources:
+        mem_mb = 256000,
+        runtime = 30,
+        slurm_partition = "short",
+        slurm_extra = "--exclude=compg009,compg010,compg011,compg013"
+    log:
+        "slogs/combine_edges.log"
+    shell:
+        """
+        module purge
+        source /well/kir/config/modules.sh
+        module load Python/3.10.8-GCCcore-12.2.0
+        source ~/devel/venv/Python-3.10.8-GCCcore-12.2.0/ultrack_env/bin/activate
+        
+        python3 -u /users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/src/utils/combine_edges.py \
+            --input_dir {OUTPUT_DIR} &> {log}
+        """
+
+
+# Rule 4: Combine foreground files
+rule combine_foreground:
+    input:
+        expand(OUTPUT_DIR + "/{input_name}_foreground.tif", input_name=INPUT_NAMES)
+    output:
+        OUTPUT_DIR + "/combined_foreground.tif"
+    threads: 1
+    resources:
+        mem_mb = 128000,
+        runtime = 30,
+        slurm_partition = "short",
+        slurm_extra = "--exclude=compg009,compg010,compg011,compg013"
+    log:
+        "slogs/combine_foreground.log"
+    shell:
+        """
+        module purge
+        source /well/kir/config/modules.sh
+        module load Python/3.10.8-GCCcore-12.2.0
+        source ~/devel/venv/Python-3.10.8-GCCcore-12.2.0/ultrack_env/bin/activate
+        
+        python3 -u /users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/src/utils/combine_foreground.py \
+            --input_dir {OUTPUT_DIR} &> {log}
+        """
+

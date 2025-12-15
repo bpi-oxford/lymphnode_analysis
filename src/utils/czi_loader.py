@@ -2,57 +2,36 @@
 from aicsimageio import AICSImage
 import tifffile as tiff
 import os
-import subprocess
 import numpy as np
 
 # Load the .czi file
-#image_path = r"/mnt/Ceph/annavschepers/Lattice_data/2024-11-21_mouse_LNs_lifeact_aCD3_B220/compressed_deskewed/b2-2a_2c_pos6-01_deskew_cgt.czi"
-image_path = r'/mnt/Ceph/annavschepers/Lattice_data/2024-11-21_mouse_LNs_lifeact_aCD3_B220/compressed_deskewed/b2-6a_overview_pos1-01_deskew_cgt.czi'
+image_path = r'/users/kir-fritzsche/aif490/devel/raw_data/videos/b2-2a_2c_pos6-01_deskew_cgt.czi'
 # Get an AICSImage object
 img = AICSImage(image_path)  # selects the first scene found
 
 
 # Pull only a specific chunk in-memory
-lazy_c0 = img.get_image_dask_data("TCZYX" , C=0) # Select the first channel explicitly
-print(lazy_c0)  # returns 4D dask array
+lazy_c0 = img.get_image_dask_data("TCZYX" , C=1) # Select the first channel explicitly
+print(lazy_c0.shape)  # returns 4D dask array
 
-T_range = [1] #np.arange(80)
-print(T_range)
-
-for T in T_range:
-    print('processing' + str(T))
-
-    z_first = 70
-    z_last = 200
-    x_first = 1191
-    x_width = 256
-    y_first = 615
-    y_width = 256
-    T_first = 0 #T
-    T_last =  80 #T+1
-
-    zlim = slice(z_first , z_last)
-    xlim = slice(x_first, x_first + x_width)
-    ylim = slice(y_first, y_first + y_width)
-    tlim = slice(T_first , T_last)
-    print(ylim)
+shape  = lazy_c0.shape
+tlim = slice(0, shape[0])
+zlim = slice(72, 72 + 256)
+ylim = slice(598, 598+1024)
+xlim = slice(568, 568+1024)
 
 
 
-    lazy_c0_crop = img.get_image_dask_data("TCZYX", T = tlim , Z=zlim , Y=ylim, X=xlim)  # returns out-of-memory 4D dask array
-    print(lazy_c0_crop)  # returns 4D dask array
-    crop = lazy_c0_crop.compute() 
-    print(crop.shape)
-    #crop = crop[0, 0, :, :, :]
+# Slice the already-loaded dask array (axes: T, Z, Y, X)
+lazy_c0_crop = lazy_c0[tlim, :, zlim, ylim, xlim]
+print(lazy_c0_crop.shape)  # returns 4D dask array
+crop = lazy_c0_crop.compute() 
+print(crop.shape)
 
-    # Save the cropped image as a TIFF file in the current directory
-    output_filename = os.path.basename(image_path).replace(".czi", "_lymphnode2_crop1_t" + str(T) + ".tiff")
-    tiff.imwrite(output_filename, crop)
-
-    # Define the external directory to copy the file to
-    external_dir = "/mnt/Work/Group Fritzsche/Ed"
-
-    # Use subprocess to copy the file to the external directory
-    subprocess.run(["cp", output_filename, external_dir], check=True)
+# Save cropped data as a tiff stack
+output_dir = r'/gpfs3/well/kir-fritzsche/users/aif490/devel/raw_data/b2-2a_2c_pos6-01_deskew_cgt_crops/'
+os.makedirs(output_dir, exist_ok=True)
+output_path = os.path.join(output_dir, f'b2-2a_2c_pos6-01_crop_C1_t{tlim.start}-{tlim.stop}_z{zlim.start}-{zlim.stop}_y{ylim.start}-{ylim.stop}_x{xlim.start}-{xlim.stop}.tiff')
+tiff.imwrite(output_path, crop.astype(np.uint16))
 
 

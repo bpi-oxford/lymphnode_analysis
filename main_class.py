@@ -9,9 +9,6 @@ from ultrack import MainConfig, link, solve, to_tracks_layer, tracks_to_zarr, ad
 from ultrack.tracks import close_tracks_gaps
 from ultrack.utils.edge import labels_to_contours
 from ultrack.imgproc import inverted_edt
-from cellpose_scripts.cellpose_batch import process_video_with_multiprocessing
-from cellpose_scripts.gamma_segmentation import gamma_transform
-from ultrack_scripts.flow_computation import compute_flow
 
 
 class TissueAnalysis:
@@ -23,20 +20,22 @@ class TissueAnalysis:
 
     def _initialize_config(self):
         config = MainConfig()
-        config.segmentation_config.n_workers = 6
-        config.segmentation_config.min_area = 1000
+        config.segmentation_config.n_workers = 32
+        config.data_config.n_workers = 32
+        config.data_config.in_memory_db_id = 1
+        config.segmentation_config.min_area = 2500
         config.segmentation_config.max_area = 1e10
         config.linking_config.max_distance = 25
         config.linking_config.max_neighbors = 15
-        config.segmentation_config.min_frontier = 0.05
+        config.segmentation_config.min_frontier = 0.15
         config.tracking_config.division_weight = -10
         config.tracking_config.appear_weight = -0.05
         config.tracking_config.disappear_weight = -0.05
         config.tracking_config.image_border_size = (20, 40, 40)
-        config.segmentation_config.max_noise = 0.05
+        config.segmentation_config.max_noise = 0.0
         return config
 
-    def process_labels_to_contours(self, segmentation_directory_path=None):
+    def process_labels_to_contours(self, sigma=0 , segmentation_directory_path=None):
         '''
         Description:
         This function processes the labels to extract foreground and edges. Labels must be found in a specific directory.
@@ -46,19 +45,22 @@ class TissueAnalysis:
         - find_contours: bool, if True, it will find contours from all the tif files in the segmentation directory. This is 
         useful for when combining multiple gamma filters for example (as ultrack claims to be improved by this - see paper)
         - segmentation_directory_path: str, path to the directory containing segmentation files.
-        - foreground_path: str, path to the foreground file. (If previously calculated)
-        - edges_path: str, path to the edges file. (If previously calculated)
 
         Outputs:
         - foreground: np.ndarray, the foreground mask.
         - edges: np.ndarray, the edges (values from 0 to 1).
         '''
+
         if not segmentation_directory_path:
             raise ValueError("Path to segmentation directory must be provided when finding contours.")
         # Load files and find contours
         file_paths = glob.glob(os.path.join(segmentation_directory_path, '*.tif'))
         print(file_paths)
         loaded_files = [tiff.imread(file_path) for file_path in file_paths]
+        for file in loaded_files:
+            print("Loaded file:")
+            print(file.shape)
+            print(file.dtype)
         
         #For some reason I dont understand, large files seems to lose their shape when loaded/saved with tifffile.
         # This is a workaround to ensure the files have the correct shape.
@@ -67,15 +69,17 @@ class TissueAnalysis:
             if file.shape[0] != self.raw_shape[0] or file.shape[1:] != self.raw_shape[1:]:
                 print('wrong shape! Reshaping the file to match raw_shape (ignoring channels).')
                 loaded_files[i] = np.resize(file, (self.raw_shape[0], *self.raw_shape[1:]))
-                loaded_files[i]=loaded_files[i].astype(np.uint8)
+                loaded_files[i]=loaded_files[i].astype(np.uint16)
                 print('raw image shape=' +  str(file.shape) + 'segmentation shape = ' + str(loaded_files[i].shape))
         
                
-        foreground, edges = labels_to_contours(loaded_files)
+        foreground, edges = labels_to_contours(loaded_files, sigma = sigma, overwrite = True)
         print(edges)
         # Save foreground and edges
-        foreground_path = os.path.join(segmentation_directory_path, 'foreground.tif')
-        edges_path = os.path.join(segmentation_directory_path, 'edges.tif')
+        foreground_path = os.path.join(segmentation_directory_path, 'ultrack/foreground.tif')
+        print(foreground_path)
+        edges_path = os.path.join(segmentation_directory_path, 'ultrack/edges.tif')
+        print(edges_path)
         tiff.imwrite(foreground_path, foreground.astype(np.uint16))
         tiff.imwrite(edges_path, edges)
         print(f"Foreground saved to {foreground_path}")
@@ -128,13 +132,19 @@ class TissueAnalysis:
             seg = process_video_with_multiprocessing(vid, custom_model_path ,cellpose_config, nprocesses=nprocesses)
             tiff.imwrite(segmentation_directory + video_name[0:-4] +  'masks.tif'    , seg )
             
-    def perform_ultrack_segmentation(self, foreground, edges):
+    def perform_ultrack_segmentation(self, foreground, edges, overwrite=False):
         '''
         This function performs the extra segmentation using ultrack on the provided foreground and edges. This takes a while!
         '''
         print(f"Foreground shape: {foreground.shape}, dtype: {foreground.dtype}")
         print(f"Edges shape: {edges.shape}, dtype: {edges.dtype}")
-        segment(foreground, edges, self.config, overwrite=True)
+        if edges.ndim == 5:
+            edges = edges[:,0,...]
+            print(f"Reduced edges shape to: {edges.shape}")
+        if foreground.ndim == 5:
+            foreground = foreground[:,0,...]
+            print(f"Reduced foreground shape to: {foreground.shape}")
+        segment(foreground, edges, self.config, overwrite=overwrite)
 
     def add_flow_field(self, raw_vid_path = None, flow_path=None , calculate_flow = False):
         '''
@@ -205,38 +215,37 @@ if __name__ == "__main__":
     See the class for the outputs of each method.
 
     '''
-    output_dir = "/home/edwheeler/Documents/raw_data/cropped_region_1/develop_output/results/"
-    segmentation_directory = r'/home/edwheeler/Documents/raw_data/cropped_region_1/develop_output/segmentation/'
-    #foreground_path = r'/home/edwheeler/Documents/node2_crop1/gamma_trans/foreground.tif'
-    #edges_path = r'/home/edwheeler/Documents/node2_crop1/gamma_trans/edges.tif'
-    raw_image_path = r'/home/edwheeler/Documents/raw_data/cropped_region_1/raw_video/b2-2a_2c_pos6-01_deskew_cgt-cropped_for_segmentation.tif'
-    custom_model_path = r"/home/edwheeler/Documents/training_data/train/models/CP_20250430_181517"
-    flow_path = r'/home/edwheeler/Documents/tissue_analysis_project/tracking_benchmarking/outputs/flow_field_node2_crop1.zarr'
+    output_dir             = r"/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/ultrack_outputs"
+    segmentation_directory = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/segmentation/videos'
+
+    foreground_path = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/videos_for_ultrack/foreground_edges/combined_foreground.tif'
+    edges_path      = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/videos_for_ultrack/foreground_edges/combined_edges_blurred.tif'
+    foreground = tiff.imread(foreground_path)
+    edges      = tiff.imread(edges_path)
+    
+    raw_image_path = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/b2-2a_2c_pos6-01_crop_C1_t0-65_z50-359_y750-1262_x1000-1512.tiff'
+
+    #flow_path = r'/home/edwheeler/Documents/tissue_analysis_project/tracking_benchmarking/outputs/flow_field_node2_crop1.zarr'
     raw_image = tiff.imread(raw_image_path)
     raw_shape = raw_image.shape
     print(raw_shape)
 
     analysis = TissueAnalysis(output_dir=output_dir, raw_shape=raw_shape)
     analysis.output_dir=output_dir
-    gamma = [0.75]
-
-    cellpose_config = {
-        'flow3D_smooth': 2,
-        'batch_size': 8,
-        'do_3D': True,
-        'diameter': 30,
-        'min_size': 500,
-        'z_axis': 0
-    }
 
     #analysis.cellpose_segmentation(raw_image_path , custom_model_path, segmentation_directory=segmentation_directory, cellpose_config=cellpose_config, gamma_values=gamma, nprocesses=4)
     
-    foreground, edges = analysis.process_labels_to_contours(segmentation_directory_path=segmentation_directory)
-    analysis.perform_ultrack_segmentation(foreground, edges)
+    #foreground, edges = analysis.process_labels_to_contours( segmentation_directory_path=segmentation_directory)
+    analysis.perform_ultrack_segmentation(foreground, edges, overwrite=True)
     
-    analysis.add_flow_field(raw_vid_path=raw_image_path , calculate_flow=False, flow_path = flow_path)
+    #analysis.add_flow_field(raw_vid_path=raw_image_path , calculate_flow=False, flow_path = flow_path)
     
     analysis.track_and_solve()
-    analysis.save_tracks(filename= "tracks_crop2.csv")
+    analysis.save_tracks(filename= "tracks_crop3_restored_ws_merge.csv")
     
     segments = analysis.relabel_segments()
+
+
+
+
+
