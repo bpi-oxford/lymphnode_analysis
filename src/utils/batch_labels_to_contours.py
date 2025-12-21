@@ -94,7 +94,8 @@ def parent_dir_labels_to_contours(input_dir, output_dir, file_index=None, sigma=
         None (saves output files to output_dir).
         '''
         # Use os.walk to find all .tif files in directory and subdirectories
-
+        seg_files = []
+        
         if file_index is None:
                 raise ValueError("Please provide a file_index to filter segmentation files.")
         
@@ -140,16 +141,32 @@ def parent_dir_labels_to_contours(input_dir, output_dir, file_index=None, sigma=
         return 
 
 
+def single_file_labels_to_contours(seg_path, output_dir,  sigma=0 ):
+        seg_image = tiff.imread(seg_path)
+        foreground, edges = labels_to_contours(seg_image, sigma = sigma, overwrite = True)
+        # Save foreground and edges
+        input_name = os.path.splitext(os.path.basename(seg_path))[0]
+        os.makedirs(output_dir, exist_ok=True)
 
+        foreground_path = os.path.join(output_dir, f'{input_name}_foreground.tif')
+        edges_path      = os.path.join(output_dir, f'{input_name}_edges.tif')
+
+        print(foreground_path)
+        print(edges_path)
+        tiff.imwrite(foreground_path, foreground.astype(np.uint16))
+        tiff.imwrite(edges_path, edges.astype(np.float32))
+        print(f"Foreground saved to {foreground_path}")
+        print(f"Edges saved to {edges_path}")
+        return
 
 if __name__ == "__main__":
         parser = argparse.ArgumentParser(
                 description='Process labels to extract foreground and edges using ultrack.'
         )
         parser.add_argument(
-                '--raw_image_path',
+                '--seg_path',
                 type=str,
-                help='Path to the raw image TIF file'
+                help='Path to the segmentation labels TIF file'
         )
         parser.add_argument(
                 '--input_dir',
@@ -175,18 +192,11 @@ if __name__ == "__main__":
         )       
         args = parser.parse_args()
         
-        print(f"Processing labels to contours...")
-        print(f"Raw image: {args.raw_image_path}")
-        print(f"Segmentation directory: {args.input_dir}")
-        print(f"Output directory: {args.output_dir}")
-        print(f"Sigma: {args.sigma}")
-        print(f"File index: {args.file_index}")
         
-        parent_dir_labels_to_contours(
-                input_dir  = args.input_dir,
+        single_file_labels_to_contours(
+                seg_path  = args.seg_path,
                 output_dir = args.output_dir,
                 sigma=args.sigma,
-                file_index=args.file_index
         )
         
         print("Processing complete!")

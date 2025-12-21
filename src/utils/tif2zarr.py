@@ -4,12 +4,13 @@ import numpy as np
 from pathlib import Path
 from natsort import natsorted
 
-def tif_dir_to_zarr(tif_dir_path: str, zarr_path: str):
+def tif_dir_to_zarr(tif_dir_path: str, zarr_path: str, filter='edges'):
     tif_dir = Path(tif_dir_path)          # folder with TIFFs
     out_store = zarr.DirectoryStore(zarr_path)
     root = zarr.group(store=out_store, overwrite=True)
 
     files = natsorted(tif_dir.glob("*.tif"))
+    files = [f for f in files if filter in f.name]
     sample = tifffile.imread(files[0])
     T = len(files)
 
@@ -27,8 +28,11 @@ def tif_dir_to_zarr(tif_dir_path: str, zarr_path: str):
         print(sample.shape)
         raise ValueError("Unexpected TIFF shape")
 
+
+    print(f"Creating Zarr dataset at {zarr_path} with shape {shape}")
+    name = "labels_" + str(filter)
     ds = root.create_dataset(
-        "labels",
+        name,
         shape=shape,
         dtype=np.uint32,
         chunks=chunks,
@@ -38,9 +42,13 @@ def tif_dir_to_zarr(tif_dir_path: str, zarr_path: str):
 
     for t, f in enumerate(files):
         data = tifffile.imread(f).astype(np.uint32)
+        if data.ndim ==4 and data.shape[0]==1:
+            data = data[0]  # remove singleton channel dimension
         ds[t] = data
-    
+    print("Zarr dataset creation complete.")
     return
+
+
 
 if __name__ == "__main__":
     import argparse
@@ -60,6 +68,12 @@ if __name__ == "__main__":
         required=True,
         help="Path to the output Zarr store.",
     )
+    parser.add_argument(
+        "--filter",
+        type=str,
+        required=True,
+        help="Filter string to select specific TIFF files.",
+    )
 
     args = parser.parse_args()
-    tif_dir_to_zarr(args.tif_dir, args.zarr_path)
+    tif_dir_to_zarr(args.input_dir, args.zarr_path, args.filter)

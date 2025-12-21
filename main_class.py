@@ -215,15 +215,16 @@ if __name__ == "__main__":
     See the class for the outputs of each method.
 
     '''
-    output_dir             = r"/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/ultrack_outputs"
-    segmentation_directory = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/segmentation/videos'
+    output_dir             = r"/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop3/ultrack_outputs"
+    #segmentation_directory = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/segmentation/videos'
 
-    foreground_path = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/videos_for_ultrack/foreground_edges/combined_foreground.tif'
-    edges_path      = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/videos_for_ultrack/foreground_edges/combined_edges_blurred.tif'
-    foreground = tiff.imread(foreground_path)
-    edges      = tiff.imread(edges_path)
+    foreground_path = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop3/segmentation/edges_foregrounds/combined/zarr/foreground_blur_s0.0.zarr'
+    edges_path      = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop3/segmentation/edges_foregrounds/combined/zarr/edges_blur_s1.0.zarr'
     
-    raw_image_path = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/b2-2a_2c_pos6-01_crop_C1_t0-65_z50-359_y750-1262_x1000-1512.tiff'
+    foreground = zarr.open(foreground_path, mode='r')['labels_foreground']
+    edges      = zarr.open(edges_path, mode='r')['labels_edges']
+    
+    raw_image_path = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop3/b2-2a_2c_pos6-01_crop_C1_t0-65_z72-328_y598-1622_x568-1592.tiff'
 
     #flow_path = r'/home/edwheeler/Documents/tissue_analysis_project/tracking_benchmarking/outputs/flow_field_node2_crop1.zarr'
     raw_image = tiff.imread(raw_image_path)
@@ -236,7 +237,7 @@ if __name__ == "__main__":
     #analysis.cellpose_segmentation(raw_image_path , custom_model_path, segmentation_directory=segmentation_directory, cellpose_config=cellpose_config, gamma_values=gamma, nprocesses=4)
     
     #foreground, edges = analysis.process_labels_to_contours( segmentation_directory_path=segmentation_directory)
-    analysis.perform_ultrack_segmentation(foreground, edges, overwrite=True)
+    analysis.perform_ultrack_segmentation(foreground, edges, overwrite=False)
     
     #analysis.add_flow_field(raw_vid_path=raw_image_path , calculate_flow=False, flow_path = flow_path)
     
