@@ -4,12 +4,16 @@ import numpy as np
 from pathlib import Path
 from natsort import natsorted
 
-def tif_dir_to_zarr(tif_dir_path: str, zarr_path: str, filter='edges'):
+def tif_dir_to_zarr(tif_dir_path: str, zarr_path: str, filter='edges', dtype=np.uint32, chunk_size = 256):
     tif_dir = Path(tif_dir_path)          # folder with TIFFs
     out_store = zarr.DirectoryStore(zarr_path)
     root = zarr.group(store=out_store, overwrite=True)
+    print(f"Reading TIFF files from {tif_dir} with filter '{filter}'")
 
-    files = natsorted(tif_dir.glob("*.tif"))
+    files = natsorted(tif_dir.glob("*"))
+
+    print(f"Found {files} in directory.")
+    
     files = [f for f in files if filter in f.name]
     sample = tifffile.imread(files[0])
     T = len(files)
@@ -17,13 +21,13 @@ def tif_dir_to_zarr(tif_dir_path: str, zarr_path: str, filter='edges'):
     if sample.ndim ==3:
         Z , Y , X = sample.shape
         shape = (T, Z, Y, X)
-        chunks = (1, Z , 512, 512)
+        chunks = (1, Z , chunk_size, chunk_size)
 
     elif sample.ndim == 4 and sample.shape[0]==1:
         print("Removing singleton channel dimension")
         Z , Y , X = sample.shape[1:]
         shape = (T, Z, Y, X)
-        chunks = (1, Z , 512, 512)
+        chunks = (1, Z , chunk_size, chunk_size)
     else:
         print(sample.shape)
         raise ValueError("Unexpected TIFF shape")
@@ -34,14 +38,14 @@ def tif_dir_to_zarr(tif_dir_path: str, zarr_path: str, filter='edges'):
     ds = root.create_dataset(
         name,
         shape=shape,
-        dtype=np.uint32,
+        dtype=dtype,
         chunks=chunks,
         compressor=None,   # <-- no compression
         overwrite=True,
     )
 
     for t, f in enumerate(files):
-        data = tifffile.imread(f).astype(np.uint32)
+        data = tifffile.imread(f).astype(dtype)
         if data.ndim ==4 and data.shape[0]==1:
             data = data[0]  # remove singleton channel dimension
         ds[t] = data
@@ -74,6 +78,11 @@ if __name__ == "__main__":
         required=True,
         help="Filter string to select specific TIFF files.",
     )
-
+    parser.add_argument(
+        "--dtype",
+        type=str,
+        default="np.uint32",
+        help="Data type for the Zarr dataset (e.g., np.uint8, np.uint16, np.uint32).",
+    )
     args = parser.parse_args()
-    tif_dir_to_zarr(args.input_dir, args.zarr_path, args.filter)
+    tif_dir_to_zarr(args.input_dir, args.zarr_path, args.filter, np.dtype(args.dtype))

@@ -22,6 +22,17 @@ def process_labels_to_contours(segmentation_path, sigma=0):
         '''
         seg_image = tiff.imread(segmentation_path)
 
+        print(f"Processing segmentation file: {segmentation_path} with shape {seg_image.shape}")
+
+        if seg_image.ndim == 4:
+                print("4D segmentation detected.")
+
+        elif seg_image.ndim == 3:
+                print("3D segmentation detected. , adding timepoint dimension.")
+                seg_image = seg_image[np.newaxis, ...]
+
+
+
         """
         #For some reason I dont understand, large files seems to lose their shape when loaded/saved with tifffile.
         # This is a workaround to ensure the files have the correct shape.

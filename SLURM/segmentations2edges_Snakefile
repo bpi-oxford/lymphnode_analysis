@@ -5,8 +5,8 @@
 import glob
 import os
 
-INPUT_DIR = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop3/segmentation'
-OUTPUT_DIR = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop3/segmentation/edges_foregrounds'
+INPUT_DIR  = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/segmentation'
+OUTPUT_DIR = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/edges_foregrounds'
 OUTPUT_DIR_COMBINED = OUTPUT_DIR + '/combined'
 OUTPUT_DIR_ZARR = OUTPUT_DIR_COMBINED + '/zarr'
 EDGES_SIGMA = 1.0
@@ -170,6 +170,7 @@ rule convert_edges_to_zarr:
         python3 -u /users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/src/utils/tif2zarr.py \
             --input_dir {OUTPUT_DIR_COMBINED} \
             --zarr_path {output} \
+            --dtype float16 \
             --filter edges &> {log}
         """
 
@@ -197,5 +198,6 @@ rule convert_foreground_to_zarr:
         python3 -u /users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/src/utils/tif2zarr.py \
             --input_dir {OUTPUT_DIR_COMBINED} \
             --zarr_path {output} \
+            --dtype uint8 \
             --filter foreground &> {log}
         """

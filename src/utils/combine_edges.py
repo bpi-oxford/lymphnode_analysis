@@ -54,7 +54,7 @@ def combine_edges(input_dir):
     return combined_edges.astype(np.float32)
 
 
-def combine_edges_timepoints_byparent(input_dir, output_dir,timepoint=None, sigma=0):
+def combine_edges_timepoints_byparent(input_dir, output_dir, timepoint=None,  sigma=0):
     import os 
     from pathlib import Path
     import numpy as np

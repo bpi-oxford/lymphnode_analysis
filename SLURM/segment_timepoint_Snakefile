@@ -1,0 +1,121 @@
+# Snakemake workflow for ultrack segmentation using batch_index
+# Each job processes one timepoint into a separate database
+# Uses ultrack's batch_index to automatically assign correct t values
+
+import os
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+# Paths to zarr stores
+FOREGROUND_PATH = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-6a_overview_pos1-01_deskew_cgt/crop1/segmentation/edges_foregrounds/combined/zarr/foreground_blur_s0.0.zarr'
+CONTOURS_PATH   = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-6a_overview_pos1-01_deskew_cgt/crop1/segmentation/edges_foregrounds/combined/zarr/edges_blur_s1.0.zarr'
+
+# Database configuration
+DATABASE_DIR = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/SLURM/databases_node2'
+MERGED_DB = os.path.join(DATABASE_DIR, "merged.db")
+
+# Timepoints to process
+TIMEPOINTS = list(range(0, 80))
+
+# Optional dataset names within zarr
+FOREGROUND_DATASET = 'labels_foreground'
+CONTOURS_DATASET = 'labels_edges'
+
+# Segmentation parameters
+MIN_AREA = 2500
+MAX_AREA = 1e8
+MIN_FRONTIER = 0.15
+N_WORKERS = 1  # Must be 1 when using batch_index
+OVERWRITE = True
+
+# ============================================================================
+# RULES
+# ============================================================================
+
+# Process all timepoints into separate databases
+rule all:
+    input:
+        expand(os.path.join(DATABASE_DIR, "timepoint_{tp:04d}", "data.db"), tp=TIMEPOINTS),
+        MERGED_DB
+
+# Segment a single timepoint using batch_index
+rule segment_timepoint:
+    output:
+        db = os.path.join(DATABASE_DIR, "timepoint_{tp}/data.db")
+    params:
+        tp = lambda wildcards: int(wildcards.tp),
+        db_path = lambda wildcards: f"sqlite:///{DATABASE_DIR}/timepoint_{wildcards.tp}/data.db",
+        foreground = FOREGROUND_PATH,
+        contours = CONTOURS_PATH,
+        foreground_dataset = FOREGROUND_DATASET,
+        contours_dataset = CONTOURS_DATASET,
+        min_area = int(MIN_AREA),
+        max_area = int(MAX_AREA),
+        min_frontier = MIN_FRONTIER,
+        n_workers = N_WORKERS,
+        overwrite = OVERWRITE
+    resources:
+        mem_mb = 132000,
+        runtime = 500,
+        slurm_partition = "short",
+        slurm_extra = "--exclude=compg009,compg010,compg011,compg013"
+    log:
+        "slogs/segment_timepoint_{tp}.log"
+    shell:
+        """
+        module purge
+        source /well/kir/config/modules.sh
+        module load Python/3.10.8-GCCcore-12.2.0
+        source ~/devel/venv/Python-3.10.8-GCCcore-12.2.0/ultrack_env/bin/activate
+        
+        python3 -u /users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/src/utils/segment_timepoint.py \
+            --timepoint {params.tp} \
+            --foreground_path {params.foreground} \
+            --contours_path {params.contours} \
+            --database_path {params.db_path} \
+            --foreground_dataset {params.foreground_dataset} \
+            --contours_dataset {params.contours_dataset} \
+            --min_area {params.min_area} \
+            --max_area {params.max_area} \
+            --min_frontier {params.min_frontier} \
+            --n_workers {params.n_workers} \
+            --overwrite &> {log}
+        """
+
+
+# ---------------------------------------------------------------------------
+# Merge rule: combine individual timepoint databases into one final DB
+# ---------------------------------------------------------------------------
+rule merge_databases:
+    input:
+        expand(os.path.join(DATABASE_DIR, "timepoint_{tp:04d}", "data.db"), tp=TIMEPOINTS)
+    output:
+        MERGED_DB
+    params:
+        database_dir = DATABASE_DIR,
+        n_timepoints = lambda wildcards: len(TIMEPOINTS),
+        n_workers = 80,
+        batch_size = 10
+    resources:
+        mem_mb = 132000,
+        runtime = 1200,
+        slurm_partition = "short",
+        slurm_extra = "--exclude=compg009,compg010,compg011,compg013"
+    log:
+        "slogs/merge_databases.log"
+    shell:
+        """
+        module purge
+        source /well/kir/config/modules.sh
+        module load Python/3.10.8-GCCcore-12.2.0
+        source ~/devel/venv/Python-3.10.8-GCCcore-12.2.0/ultrack_env/bin/activate
+
+        python3 -u /users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/src/utils/merge_databases.py \
+            --database_dir {params.database_dir} \
+            --output_db {output} \
+            --n_timepoints {params.n_timepoints} \
+            --n_workers {params.n_workers} \
+            --batch_size {params.batch_size} &> {log}
+        """

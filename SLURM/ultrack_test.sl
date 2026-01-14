@@ -1,11 +1,12 @@
 #!/bin/bash
 
-#SBATCH --job-name      ultrack_test
-#SBATCH --cpus-per-task 36
+#SBATCH --job-name      ultrack_real
+#SBATCH --cpus-per-task 8
 ##SBATCH --partition=gpu_short                #Select partition. You can run sinfo command to list all partitions
-##SBATCH --gpus-per-node=1                    #Number of GPUs. Always starts with 1 ( more GPU, more wait time)               
-#SBATCH --mem           512G
-#SBATCH --time          13:59:00         #days-minutes-seconds
+##SBATCH --gpus-per-node=1                    #Number of GPUs. Always starts with 1 ( more GPU, more wait time)   
+#SBATCH --partition     long           
+#SBATCH --mem           700G
+#SBATCH --time          51:59:00         #days-minutes-seconds
 #SBATCH --output        slogs/ultrack_test.%j.out
 #SBATCH --error         slogs/ultrack_test.%j.err
 #SBATCH --exclude       compg009,compg010,compg011,compg013
@@ -16,4 +17,4 @@ module load Python/3.10.8-GCCcore-12.2.0
 module load Gurobi/10.0.1-GCCcore-12.2.0
 source ~/devel/venv/Python-3.10.8-GCCcore-12.2.0/ultrack_env/bin/activate
 
-python3 /users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/main_class.py
+python3 -u /users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/main_class.py

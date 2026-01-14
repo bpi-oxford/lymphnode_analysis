@@ -20,18 +20,18 @@ class TissueAnalysis:
 
     def _initialize_config(self):
         config = MainConfig()
-        config.segmentation_config.n_workers = 32
-        config.data_config.n_workers = 32
-        config.data_config.in_memory_db_id = 1
+        config.segmentation_config.n_workers = 8
+        config.data_config.n_workers = 8
+        config.data_config.in_memory_db_id = 2
         config.segmentation_config.min_area = 2500
         config.segmentation_config.max_area = 1e10
         config.linking_config.max_distance = 25
         config.linking_config.max_neighbors = 15
         config.segmentation_config.min_frontier = 0.15
-        config.tracking_config.division_weight = -10
-        config.tracking_config.appear_weight = -0.05
-        config.tracking_config.disappear_weight = -0.05
-        config.tracking_config.image_border_size = (20, 40, 40)
+        config.tracking_config.division_weight  = -10
+        config.tracking_config.appear_weight    = -0.1
+        config.tracking_config.disappear_weight = -0.01
+        #config.tracking_config.image_border_size = (20, 40, 40)
         config.segmentation_config.max_noise = 0.0
         return config
 
@@ -215,16 +215,18 @@ if __name__ == "__main__":
     See the class for the outputs of each method.
 
     '''
-    output_dir             = r"/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop3/ultrack_outputs"
+    output_dir             = r"/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-6a_overview_pos1-01_deskew_cgt/crop1/ultrack_outputs"
     #segmentation_directory = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop2/segmentation/videos'
 
-    foreground_path = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop3/segmentation/edges_foregrounds/combined/zarr/foreground_blur_s0.0.zarr'
-    edges_path      = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop3/segmentation/edges_foregrounds/combined/zarr/edges_blur_s1.0.zarr'
+    foreground_path = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-6a_overview_pos1-01_deskew_cgt/crop1/segmentation/edges_foregrounds/combined/zarr/foreground_blur_s0.0.zarr'
+    edges_path      = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-6a_overview_pos1-01_deskew_cgt/crop1/segmentation/edges_foregrounds/combined/zarr/edges_blur_s1.0.zarr'
     
     foreground = zarr.open(foreground_path, mode='r')['labels_foreground']
     edges      = zarr.open(edges_path, mode='r')['labels_edges']
     
-    raw_image_path = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-2a_2c_pos6-01_deskew_cgt/crop3/b2-2a_2c_pos6-01_crop_C1_t0-65_z72-328_y598-1622_x568-1592.tiff'
+    print('opened the zarr files:')
+
+    raw_image_path = r'/users/kir-fritzsche/aif490/devel/tissue_analysis/lymphnode_analysis/data2track/b2-6a_overview_pos1-01_deskew_cgt/crop1/b2-6a_overview_pos1-01_crop_C0_t0-80_z53-309_y0-2048_x528-1552.tiff'
 
     #flow_path = r'/home/edwheeler/Documents/tissue_analysis_project/tracking_benchmarking/outputs/flow_field_node2_crop1.zarr'
     raw_image = tiff.imread(raw_image_path)
@@ -237,12 +239,12 @@ if __name__ == "__main__":
     #analysis.cellpose_segmentation(raw_image_path , custom_model_path, segmentation_directory=segmentation_directory, cellpose_config=cellpose_config, gamma_values=gamma, nprocesses=4)
     
     #foreground, edges = analysis.process_labels_to_contours( segmentation_directory_path=segmentation_directory)
-    analysis.perform_ultrack_segmentation(foreground, edges, overwrite=False)
+    analysis.perform_ultrack_segmentation(foreground, edges, overwrite=True)
     
     #analysis.add_flow_field(raw_vid_path=raw_image_path , calculate_flow=False, flow_path = flow_path)
     
     analysis.track_and_solve()
-    analysis.save_tracks(filename= "tracks_crop3_restored_ws_merge.csv")
+    analysis.save_tracks(filename= "tracks_crop1_restored_ws_merge_no_appear.csv")
     
     segments = analysis.relabel_segments()
 
